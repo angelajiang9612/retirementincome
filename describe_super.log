@@ -1,0 +1,145 @@
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/bubbles/Desktop/Retirement_Income/dofile/describe_super.log
+  log type:  text
+ opened on:   1 Jun 2023, 17:47:50
+
+. 
+. global folder_path "/Users/bubbles/Desktop/Hilda" 
+
+. 
+. global data_output "$folder_path/output"
+
+. 
+. use "$data_output/housing_variables", clear 
+
+. 
+. compress
+  variable wave was float now byte
+  (1,299,345 bytes saved)
+
+. 
+. //using birth year and age at the June 30 to generate preservation age 
+. 
+. 
+. by id: gen p_age = 55 if hgyob <= 1959
+(309,942 missing values generated)
+
+. by id: replace p_age = 55 if  hgyob == 1960 & hgage[1] == 41 
+(2,050 real changes made)
+
+. by id: replace p_age = 56 if  hgyob == 1960 & hgage[1] == 40
+(2,312 real changes made)
+
+. by id: replace p_age = 56 if  hgyob == 1961 & hgage[1] == 40
+(2,557 real changes made)
+
+. by id: replace p_age = 57 if  hgyob == 1961 & hgage[1] == 39
+(2,602 real changes made)
+
+. by id: replace p_age = 57 if  hgyob == 1962 & hgage[1] == 39
+(2,854 real changes made)
+
+. by id: replace p_age = 58 if  hgyob == 1962 & hgage[1] == 38
+(2,343 real changes made)
+
+. by id: replace p_age = 58 if  hgyob == 1963 & hgage[1] == 38
+(2,536 real changes made)
+
+. by id: replace p_age = 59 if  hgyob == 1963 & hgage[1] == 37
+(2,362 real changes made)
+
+. by id: replace p_age = 59 if  hgyob == 1964 & hgage[1] == 37
+(2,777 real changes made)
+
+. by id: replace p_age = 60 if  hgyob == 1964 & hgage[1] == 36
+(2,353 real changes made)
+
+. by id: replace p_age = 60 if  hgyob >= 1965 
+(278,913 real changes made)
+
+. 
+. //1.45% missing, probably related to top-up sample need to check 
+. 
+. 
+. //generate event reaching preservation age 
+. 
+. gen event=(p_age == hgage)
+
+. by id: egen eventwave = max(cond(event!=0, wave, .)) //record wave event took place, max ignore missing values automatically 
+(359,542 missing values generated)
+
+. gen timesinceevent = wave - eventwave //relative time to event 
+(359,542 missing values generated)
+
+. 
+. 
+. ////////////////outcome variables///////////////////////////////// 
+> 
+. gen lfp =(esbrd==1 | esbrd==2) 
+
+. 
+. //clean up retirement variable and calculate probability of retirement by time to p_age 
+. 
+. 
+. /*
+> // The basic version where just look at mean lfp relative to p_age 
+> 
+> sort timesinceevent
+> by timesinceevent: egen meanlfp_t = mean(lfp) //generate average lfp by relative time. 
+> egen tag_t = tag(timesinceevent) //tag distinct values so graph has one observation each, should do it by if not missing average group value if add group qualifier 
+> 
+> sort timesinceevent
+> twoway connected meanlfp_t timesinceevent if tag_t ==1 & rtcomp !=3,  xline(0, lcolor(green)) //this looks okay, something is obviously up at t=0 
+> 
+> 
+> */
+. 
+. //look at subsamples 
+. 
+. //working (lfp==1) at -10 periods before p_age
+. 
+. sort id 
+
+. 
+. by id: egen working_minus_10 = max(cond(lfp==1 & timesinceevent==-10, 1, 0))
+
+. by id: egen working_10 = max(working_minus_10)
+
+. sort timesinceevent working_10
+
+. 
+. by timesinceevent working_10: egen meanlfp_w10 = mean(lfp) 
+
+. 
+. egen tag_w10 = tag(timesinceevent) if working_10 ==1
+
+. 
+. sort timesinceevent
+
+. twoway connected meanlfp_w10 timesinceevent if tag_w10 ==1 & rtcomp !=3  & inrange(timesinceevent, -10,10) ,  xline(0, lcolor(green)) //this looks okay, something is obviously up at t=0, si
+> milar trend as before 
+
+. 
+end of do-file
+
+. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD02925.000000"
+
+. 
+. *Author: Angela Jiang 
+. *Written on a mac 
+. 
+. *This dofile...
+. 
+. 
+. *Input Data: 
+. *Output files:
+. 
+. 
+. clear 
+
+. 
+. version 17.0
+
+. 
+. cap log close 

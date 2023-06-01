@@ -20,7 +20,7 @@ macro drop _all
 set seed 0102
 
 
-cd "/Users/bubbles/Desktop/Super and Housing/dofiles" 
+cd "/Users/bubbles/Desktop/Retirement_Income/dofile" 
 
 
 log using housing_describe.log , text replace 
