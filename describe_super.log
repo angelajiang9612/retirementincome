@@ -1,8 +1,8 @@
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  /Users/bubbles/Desktop/Retirement_Income/dofile/describe_super.log
   log type:  text
- opened on:   1 Jun 2023, 17:47:50
+ opened on:  22 Jun 2023, 16:15:10
 
 . 
 . global folder_path "/Users/bubbles/Desktop/Hilda" 
@@ -11,62 +11,47 @@
 . global data_output "$folder_path/output"
 
 . 
-. use "$data_output/housing_variables", clear 
+. use "$data_output/all_variables.dta", clear 
 
 . 
 . compress
-  variable wave was float now byte
-  (1,299,345 bytes saved)
+  variable lfp was float now byte
+  variable retirement_status was float now byte
+  variable retired_change was float now byte
+  variable retired was float now byte
+  variable p_age was float now byte
+  variable changed_cpq was float now byte
+  variable changed_scq was float now byte
+  variable j_changed was float now byte
+  variable reached_page was float now byte
+  variable sixty_plus was float now byte
+  variable cond_release was float now byte
+  variable cond_changed was float now byte
+  variable move_address was float now byte
+  variable own was float now byte
+  variable upgrade_financial was float now byte
+  variable downgrade_financial was float now byte
+  variable upgrade_physical was float now byte
+  variable downgrade_physical was float now byte
+  variable rent_to_own was float now byte
+  variable own_to_rent was float now byte
+  (25,986,900 bytes saved)
 
 . 
+. xtset id wave //set as panel 
+
+Panel variable: id (unbalanced)
+ Time variable: wave, 1 to 21, but with gaps
+         Delta: 1 unit
+
 . //using birth year and age at the June 30 to generate preservation age 
-. 
-. 
-. by id: gen p_age = 55 if hgyob <= 1959
-(309,942 missing values generated)
-
-. by id: replace p_age = 55 if  hgyob == 1960 & hgage[1] == 41 
-(2,050 real changes made)
-
-. by id: replace p_age = 56 if  hgyob == 1960 & hgage[1] == 40
-(2,312 real changes made)
-
-. by id: replace p_age = 56 if  hgyob == 1961 & hgage[1] == 40
-(2,557 real changes made)
-
-. by id: replace p_age = 57 if  hgyob == 1961 & hgage[1] == 39
-(2,602 real changes made)
-
-. by id: replace p_age = 57 if  hgyob == 1962 & hgage[1] == 39
-(2,854 real changes made)
-
-. by id: replace p_age = 58 if  hgyob == 1962 & hgage[1] == 38
-(2,343 real changes made)
-
-. by id: replace p_age = 58 if  hgyob == 1963 & hgage[1] == 38
-(2,536 real changes made)
-
-. by id: replace p_age = 59 if  hgyob == 1963 & hgage[1] == 37
-(2,362 real changes made)
-
-. by id: replace p_age = 59 if  hgyob == 1964 & hgage[1] == 37
-(2,777 real changes made)
-
-. by id: replace p_age = 60 if  hgyob == 1964 & hgage[1] == 36
-(2,353 real changes made)
-
-. by id: replace p_age = 60 if  hgyob >= 1965 
-(278,913 real changes made)
-
-. 
-. //1.45% missing, probably related to top-up sample need to check 
-. 
 . 
 . //generate event reaching preservation age 
 . 
 . gen event=(p_age == hgage)
 
-. by id: egen eventwave = max(cond(event!=0, wave, .)) //record wave event took place, max ignore missing values automatically 
+. by id: egen eventwave = max(cond(event!=0, wave, .)) //record wave event took place, max ignore missing values
+>  automatically 
 (359,542 missing values generated)
 
 . gen timesinceevent = wave - eventwave //relative time to event 
@@ -74,72 +59,111 @@
 
 . 
 . 
-. ////////////////outcome variables///////////////////////////////// 
-> 
-. gen lfp =(esbrd==1 | esbrd==2) 
+. 
+. //generate event  change in access condition 
+. gen event_a=(cond_changed == 1) 
+
+. by id: egen eventwave_a = max(cond(event_a!=0, wave, .)) //record wave event took place, max ignore missing va
+> lues automatically 
+(360,262 missing values generated)
+
+. gen timesince_a = wave - eventwave_a //relative time to event 
+(360,262 missing values generated)
 
 . 
-. //clean up retirement variable and calculate probability of retirement by time to p_age 
 . 
-. 
-. /*
-> // The basic version where just look at mean lfp relative to p_age 
+. ////////////////construct some more variables///////////////////////////////// 
 > 
-> sort timesinceevent
-> by timesinceevent: egen meanlfp_t = mean(lfp) //generate average lfp by relative time. 
-> egen tag_t = tag(timesinceevent) //tag distinct values so graph has one observation each, should do it by if not missing average group value if add group qualifier 
-> 
-> sort timesinceevent
-> twoway connected meanlfp_t timesinceevent if tag_t ==1 & rtcomp !=3,  xline(0, lcolor(green)) //this looks okay, something is obviously up at t=0 
-> 
-> 
-> */
-. 
-. //look at subsamples 
-. 
-. //working (lfp==1) at -10 periods before p_age
-. 
+. gen super_at_retirement= super_final if retired ==1
+(430,232 missing values generated)
+
 . sort id 
 
-. 
-. by id: egen working_minus_10 = max(cond(lfp==1 & timesinceevent==-10, 1, 0))
+. by id: egen super=max(super_at_retirement)
+(393,620 missing values generated)
 
-. by id: egen working_10 = max(working_minus_10)
-
-. sort timesinceevent working_10
+. xtile super_quart = super, nq(4)
 
 . 
-. by timesinceevent working_10: egen meanlfp_w10 = mean(lfp) 
+. //Simply looking at lfp vs age and not superannuation//
+. 
+. sort hgage 
 
 . 
-. egen tag_w10 = tag(timesinceevent) if working_10 ==1
+. by hgage: egen meanlfp = mean(lfp) //calculate mean lfp by age 
 
 . 
-. sort timesinceevent
+. egen tagage = tag(hgage) //tag unique values  
 
-. twoway connected meanlfp_w10 timesinceevent if tag_w10 ==1 & rtcomp !=3  & inrange(timesinceevent, -10,10) ,  xline(0, lcolor(green)) //this looks okay, something is obviously up at t=0, si
-> milar trend as before 
+. 
+. //
+. //twoway line meanlfp hgage if tagage ==1 & hgage <=80 & hgage >=20
+. //
+. 
+. lgraph lfp hgage if hgage <=80 & hgage >=45, nomarker 
+
+. lgraph retired hgage if hgage <=80 & hgage >=45, nomarker 
+
+. 
+.  //general graph of decline in lfp look pretty smooth. Look somewhat like it gets most steep around 55 for a b
+> it then flatter again for a couple of periods then become more steep as heading towards mid 60s. 
+. 
+. 
+. // mean lfp relative to p_age 
+. 
+end of do-file
+
+. lgraph lfp timesinceevent, xline(0, lcolor(green)) nomarker ytitle(labor force participation)
+
+. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD76280.000000"
+
+. 
+. lgraph lfp timesinceevent, xline(0, lcolor(green)) nomarker ytitle(labor force participation) xlabel(-20 "" -1
+> 0 "" 0 "preservation age" 10 "" 20 "")
 
 . 
 end of do-file
 
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD02925.000000"
+. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD76280.000000"
 
 . 
-. *Author: Angela Jiang 
-. *Written on a mac 
-. 
-. *This dofile...
-. 
-. 
-. *Input Data: 
-. *Output files:
-. 
-. 
-. clear 
+. lgraph lfp timesinceevent, xline(0, lcolor(green)) nomarker ytitle(labor force participation) xlabel(-20 "" -1
+> 0 "" 0 "preservation age" 10 "" 20 "") xtitle("")
 
 . 
-. version 17.0
+end of do-file
+
+. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD76280.000000"
+
+. lgraph lfp timesinceevent, xline(0, lcolor(green)) nomarker ytitle(labor force participation) xtitle("Preserva
+> tion Age")
 
 . 
-. cap log close 
+end of do-file
+
+. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD76280.000000"
+
+. 
+. lgraph lfp timesinceevent, xline(0, lcolor(green)) nomarker ytitle(labor force participation) xtitle("preserva
+> tion age")
+
+. 
+end of do-file
+
+. graph export "/Users/bubbles/Desktop/Retirement_Income/writings/1.lfp.jpg", as(jpg) name("Graph") quality(90)
+file /Users/bubbles/Desktop/Retirement_Income/writings/1.lfp.jpg saved as JPG format
+
+. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD76280.000000"
+
+. 
+. lgraph lfp timesinceevent super_quart, xline(0, lcolor(green)) nomarker //people with lowest quartile superannuation tend to have initially much
+>  lower level of labor force participation but eventually higher rates than those with higher superannuation, probably because they tend to inclu
+> de largely the self-employed group. 
+
+. 
+. graph export "/Users/bubbles/Desktop/Retirement_Income/writings/1.lfp_super.jpg", as(jpg) name("Graph") quality(90) replace
+file /Users/bubbles/Desktop/Retirement_Income/writings/1.lfp_super.jpg saved as JPG format
+
+. 
+end of do-file
+

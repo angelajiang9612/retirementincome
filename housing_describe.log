@@ -1,8 +1,8 @@
---------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
-       log:  /Users/bubbles/Desktop/Super and Housing/dofiles/housing_describe.log
+       log:  /Users/bubbles/Desktop/Retirement_Income/dofile/housing_describe.log
   log type:  text
- opened on:  31 May 2023, 09:09:14
+ opened on:  22 Jun 2023, 16:08:40
 
 . 
 . 
@@ -12,7 +12,7 @@
 . global data_output "$folder_path/output"
 
 . 
-. use "$data_output/housing_variables", clear 
+. use "$data_output/combined", clear 
 
 . 
 . compress
@@ -31,24 +31,95 @@ Panel variable: id (unbalanced)
 (346,438 observations deleted)
 
 . 
+. by id (wave), sort: keep if hstenr[1] == 1 //keep initial owners
+(31,480 observations deleted)
+
+. 
+. 
+. 
+. //1.simple version where just looks at the first outcome when the first ownership spell ends (end if move addr
+> ess), and see what that outcome is 
+. 
+. //the main point is to generate a dataset that has id, failure (the final outcome when change happened) and fa
+> iltime (when this change happened) 
+. //something who dropped after 3 waves and someone who dropped out after 20 waves both count as attrition but a
+> t different times. 
+. 
+. sort id wave 
+
+. 
+. by id: gen flag=1 if missing(hstenr) | (missing(mhli) & _n!=1)  //drop waves after a key variable becomes miss
+> ing
+(52,851 missing values generated)
+
+. by id : replace flag=flag[_n-1] if flag[_n-1]==1
+(1,914 real changes made)
+
+. drop if flag==1 
+(4,260 observations deleted)
+
+. drop flag 
+
+. 
+. by id: gen change=1 if (hstenr[_n] != hstenr[_n-1]) & _n!=1 & !missing(hstenr) & !missing(hstenr[_n-1]) //chan
+> ge ownership status (in principal can live in the same place)
+(49,431 missing values generated)
+
+. replace change =1 if mhli==1 //change address 
+(1,519 real changes made)
+
+. by id: egen failtime= min(cond(change == 1, wave, .)) //record the first time change turned 1 
+(27,488 missing values generated)
+
+. by id: egen failure = min(cond(wave == failtime, hstenr, .))
+(27,488 missing values generated)
+
+. 
+. by id: replace failure = 0 if missing(failure) // attrition 
+(27,488 real changes made)
+
+. by id: replace failtime = _N if missing(failtime) //record period attrition happened. 
+(27,488 real changes made)
+
+. 
+. //describe 
+. label define outcomes 0 "0 attrition" 1 "1 ownership" 2 "2 rent" 3 "3 rent-buy scheme" 4 "4 rent free"
+
+. label values failure outcomes
+
+. tab failure if wave==1 //this shows what happens to those initial owners (after the end of the first ownership
+>  spell)
+
+          failure |      Freq.     Percent        Cum.
+------------------+-----------------------------------
+      0 attrition |      2,860       66.78       66.78
+      1 ownership |        926       21.62       88.40
+           2 rent |        318        7.42       95.82
+3 rent-buy scheme |          9        0.21       96.03
+      4 rent free |        170        3.97      100.00
+------------------+-----------------------------------
+            Total |      4,283      100.00
+
+. 
 end of do-file
 
-. tab hstenr if wave ==1
+. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD76280.000000"
 
-       R3 Own, Rent or live rent free |      Freq.     Percent        Cum.
---------------------------------------+-----------------------------------
-[1] Own/currently paying off mortgage |      4,283       83.55       83.55
-              [2] Rent (or pay board) |        689       13.44       97.00
-    [3] Involved in a rent-buy scheme |        154        3.00      100.00
---------------------------------------+-----------------------------------
-                                Total |      5,126      100.00
-
+. 
+. *Author: Angela Jiang 
+. 
+. *This dofile computes some lfp and retirement probability means around superannuation preservation age and sup
+> erannuation access time. 
+. 
+. *Input Data: super.dta (with retirement and super variables)
+. 
+. *Output files:
+. 
+. 
 . clear 
 
-. gen id = 5
+. 
+. version 17.0
 
-. tab id
-no observations
-
-. help mod 
-
+. 
+. cap log close 

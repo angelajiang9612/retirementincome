@@ -2,7 +2,7 @@
 *Author: Angela Jiang 
 *Written on a mac 
 
-*This dofile...
+*This dofile pick useful variables from HILDA and merges waves of HILDA into one long form file
 
 
 *Input Data: 
@@ -39,9 +39,13 @@ clear
 
 local varstokeep hgsex hgage hgyob ghgh ghpf mrcurr tchad hhd0_4 esdtl edhigh1 hhsad10 /// 
 hstenr hstenur mhli mhlyr hsyr hhadst lemvd rpsold hsvalue hsvalui hsprice losathl losatnl hsbedrm ///
-es esbrd esdtl esempdt esempst estjb rtage rt5yr lertr rtcomp rtcompn rtcrpr ///
+es esbrd esdtl esempdt esempst estjb rtage rt5yr lertr rtcomp rtcompn rtcrpr rtstat rtyr ///
 hxyhmrn hxyhmri hsdebt hsdebti hsmg hsmgowe hwhmeip rtmfmv ///
-hhtup
+hhtup ///
+saest saval savaln savaln2 rtsup rtlump sacfnd2 sacfndr sacfnda sacfnd /// super
+bnage bncap bncapa /// age pension
+lejob pjsemp pjmsemp /// job change 
+
 
 	 
 local i = 0
@@ -77,13 +81,33 @@ foreach w in a b c d e f g h i j k l m n o p q r s t {
 
 mvdecode _all, mv(-1=.a \ -2=.b \ -3=.c \ -4=.d \ -5=.e \ -6=.f \ -7=.g \ -8=.h \ -9=.i \ -10=.j)
 
-/*
+label dir //put all the labels in macro called r(names)
 
-label define lab .a "[.a] Not asked" .b "[.b] Not applicable" .c "[.c] Don't know"  .d "[.d] Refused or not answered" .e "[.e] Invalid multiple response (SCQ only)" .f "[.f] Value implausible" .g "[.g] Unable to determine value" .h "[.h] No Self-Completion Questionnaire returned and matched to individual record" .i "[.i] Non-responding household" .j "[.j] Non-responding person", add 
+foreach lab in `r(names)' {
+   label define `lab' -1 "", modify
+   label define `lab' -2 "", modify
+   label define `lab' -3 "", modify
+   label define `lab' -4 "", modify
+   label define `lab' -5 "", modify
+   label define `lab' -6 "", modify
+   label define `lab' -7 "", modify
+   label define `lab' -8 "", modify
+   label define `lab' -9 "", modify
+   label define `lab' -10 "", modify
+	 
+   label define `lab' .a "[.a] Not asked", modify
+   label define `lab' .b "[.b] Not applicable", modify
+   label define `lab' .c "[.c] Don't know", modify
+   label define `lab' .d "[.d] Refused or not answered", modify
+   label define `lab' .e "[.e] Invalid multiple response (SCQ only)" , modify
+   label define `lab' .f "[.f] Value implausible" , modify
+   label define `lab' .g "[.g] Unable to determine value", modify
+   label define `lab' .h "[.h] No Self-Completion Questionnaire returned and matched to individual record", modify
+   label define `lab' .i "[.i] Non-responding household", modify
+   label define `lab' .j "[.j] Non-responding person", modify
+}
 
-label values `varstokeep' lab 
 
-*/
 
 ******
 
@@ -100,4 +124,4 @@ by id: replace hstenr = hstenur if _n==1
 
 // Save new data set
 
-save "$data_output/housing_variables", replace 
+save "$data_output/combined", replace 
