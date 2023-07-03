@@ -58,17 +58,10 @@ xtile super_quart = super, nq(4)
 
 //Simply looking at lfp vs age and not superannuation//
 
-sort hgage 
-
-by hgage: egen meanlfp = mean(lfp) //calculate mean lfp by age 
-
-egen tagage = tag(hgage) //tag unique values  
-
-//
-//twoway line meanlfp hgage if tagage ==1 & hgage <=80 & hgage >=20
-//
 
 lgraph lfp hgage if hgage <=80 & hgage >=45, nomarker 
+
+
 lgraph retired hgage if hgage <=80 & hgage >=45, nomarker 
 
  //general graph of decline in lfp look pretty smooth. Look somewhat like it gets most steep around 55 for a bit then flatter again for a couple of periods then become more steep as heading towards mid 60s. 
@@ -76,13 +69,18 @@ lgraph retired hgage if hgage <=80 & hgage >=45, nomarker
 
 // mean lfp relative to p_age 
 
-lgraph lfp timesinceevent, xline(0, lcolor(green)) nomarker ytitle(labor force participation) xlabel(-20 "" -10 "" 0 "preservation age" 10 "" 20 "") xtitle("")
+lgraph lfp timesinceevent, xline(0, lcolor(green)) nomarker ytitle(labor force participation) xtitle("preservation age")
+
+graph export "/Users/bubbles/Desktop/Retirement_Income/writings/1.lfp.jpg", as(jpg) name("Graph") quality(90) replace
 
 //mean retirement probability relative to p_age 
 
 lgraph lfp timesinceevent hgsex, xline(0, lcolor(green)) nomarker //not much difference between the sexes
 
-lgraph lfp timesinceevent super_quart, xline(0, lcolor(green)) nomarker //people with lowest quartile superannuation tend to have initially much lower level of labor force participation but eventually higher rates than those with higher superannuation, probably because they tend to include largely the self-employed group. 
+lgraph lfp timesinceevent super_quart, xline(0, lcolor(green)) nomarker ytitle(labor force participation) xtitle("preservation age") //people with lowest quartile superannuation tend to have initially much lower level of labor force participation but eventually higher rates than those with higher superannuation, probably because they tend to include largely the self-employed group. 
+
+graph export "/Users/bubbles/Desktop/Retirement_Income/writings/1.lfp_super.jpg", as(jpg) name("Graph") quality(90) replace
+
 
 lgraph retired timesinceevent hgsex, xline(0, lcolor(green)) nomarker //probability of retirement reaches a slight local max at p_age but not obviously important. Age pension eligibility seems much more important. 
 
@@ -104,17 +102,28 @@ twoway connected meanlfp_t timesinceevent if tag_t ==1 & rtcomp !=3,  xline(0, l
 //housing around when a person gains access to superannuation 
 
 lgraph lfp timesince_a, xline(0, lcolor(green)) nomarker
-lgraph own timesince_a if super_at_retirement>700000, xline(0, lcolor(green)) nomarker //not sure why there is a weird dip in the middle. 
+lgraph own timesince_a if super_quart==3 | super_quart==4 , xline(0, lcolor(green)) nomarker //not sure why there is a weird dip in the middle. 
 
 
-lgraph own timesince_a, xline(0, lcolor(green)) nomarker
-lgraph own timesince_a super_quart, xline(0, lcolor(green)) nomarker
-lgraph upgrade_financial timesince_a, xline(0, lcolor(green)) nomarker
+lgraph own timesince_a if timesince_a <=15 & timesince_a >= -15, xline(0, lcolor(green)) nomarker ytitle(home ownership) xtitle("super access") 
+graph export "/Users/bubbles/Desktop/Retirement_Income/writings/2.ownership.jpg", as(jpg) name("Graph") quality(90) replace
+
+lgraph own timesince_a super_quart if timesince_a <=15 & timesince_a >= -15, xline(0, lcolor(green)) nomarker ytitle(home ownership) xtitle("super access") 
+graph export "/Users/bubbles/Desktop/Retirement_Income/writings/2.ownership_super.jpg", as(jpg) name("Graph") quality(90) replace
+
+gen timesince_a2= cond(timesince_a==0, 0,  2*ceil(timesince_a/2 ))
+
+lgraph upgrade_financial timesince_a if super_quart==3 | super_quart==4, xline(0, lcolor(green)) nomarker
 lgraph downgrade_financial timesince_a, xline(0, lcolor(green)) nomarker
 lgraph upgrade_physical timesince_a, xline(0, lcolor(green)) nomarker
 lgraph downgrade_physical timesince_a, xline(0, lcolor(green)) nomarker
-lgraph rent_to_own timesince_a, xline(0, lcolor(green)) nomarker
+lgraph rent_to_own timesince_a if super_quart==3 | super_quart==4, xline(0, lcolor(green)) nomarker
 lgraph own_to_rent timesince_a, xline(0, lcolor(green)) nomarker
+
+
+lgraph upgrade_financial timesince_a2 if super_quart==3 | super_quart==4, xline(0, lcolor(green)) nomarker
+lgraph rent_to_own timesince_a2 if super_quart==3 | super_quart==4, xline(0, lcolor(green)) nomarker
+
 
 //is the variable I constructed for access super too noisy or the superannuation I interpolated too noisy try with only the waves with the actual super information? Or use only the past 10 years where we know retirement date and superannuation amount?
 

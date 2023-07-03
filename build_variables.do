@@ -92,6 +92,8 @@ by id: replace p_age = 60 if  hgyob >= 1965
 
 //generate indicator for reaching condition of release 
 
+
+/*
 //gen job change indicator 
 
 gen changed_cpq =1 if pjsemp ==2  //this is only asked of last period employed people 
@@ -116,6 +118,11 @@ by id: replace cond_release=1 if cond_release[_n-1] ==1
 replace cond_release =0 if missing(cond_release)
 by id: gen cond_changed =1 if cond_release - cond_release[_n-1] ==1
 replace cond_changed =0 if missing(cond_changed)
+
+*/ 
+
+
+
 
 
 ///////superannuation amount/////
@@ -191,6 +198,13 @@ replace super_c = super_estimater if !missing(super_estimater) & missing(super_e
 
 by id: ipolate super_c wave, generate(super_final) //generate int super_estimate, do not extrapolate because people will retire and super will then decline
 
+
+gen super_at_retirement= super_final if retired ==1
+
+bysort id: egen super=max(super_at_retirement)
+xtile super_quart = super, nq(4)
+
+
 //come up with some permanent superannuation component or something that would allow more super annuation information to be used. 
 
 
@@ -218,6 +232,44 @@ by id: gen downgrade_physical = (hstenr[_n-1] == 1 & hstenr ==1 & mhli==1 &  hsb
 by id: gen rent_to_own =((hstenr[_n-1] == 2 |  hstenr[_n-1] == 4) & hstenr ==1)
 
 by id: gen own_to_rent = (hstenr[_n-1] == 1 & (hstenr == 2 |  hstenr == 4))
+
+
+//constructing age pension variable 
+
+gen pension_age=1 if bnage==1 | bnage==2 | bnage1==1
+bysort id: replace pension_age=1 if pension_age[_n-1] ==1 //fill, in waves where someone is non-responding bnage is recorded as zero
+replace pension_age=0 if missing(pension_age)
+bysort id: gen pension_changed =1 if pension_age - pension_age[_n-1] ==1 
+replace pension_changed =0 if missing(pension_changed)
+bysort id: egen pwave = max(cond(pension_changed==1, wave, .)) //the wave at which reached pension age 
+gen flag1=1 if wave <= pwave+1 & wave>=pwave //period or period after turning to age_pension age, inrange does something funny with missing values 
+gen p1=1 if bncap==1 & flag1==1 
+bysort id: egen p_receives1 = max(p1)
+
+gen flag5=1 if wave <= pwave+5 & wave>=pwave 
+gen p5=1 if bncap==1 & flag5==1
+bysort id: egen p_receives5 = max(p5)
+
+
+
+
+
+
+
+//indicator for receives age pension 1-2 years after reaching eligible age 
+
+//indicator for receives age pension 1-5 years after reaching eligible age 
+
+//indicator for receives age pension 1-10 years after reaching eligible age 
+
+//can vary based on if receives full pension or not. 
+
+
+
+
+
+
+
 
 
 // Save new data set

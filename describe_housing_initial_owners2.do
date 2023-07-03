@@ -67,7 +67,7 @@ label define outcomes 0 "0 attrition" 1 "1 ownership" 2 "2 rent" 3 "3 rent-buy s
 label values failure outcomes
 tab failure if wave==1 //this shows what happens to those initial owners (after the end of the first ownership spell)
 
-
+/*
 
 //1.b As above but divide move into another ownership phase into physical upgrade and downgrade 
 
@@ -82,6 +82,10 @@ replace failure = 12 if sizechange ==2 & failure ==1
 replace failure = 13 if sizechange ==3 & failure ==1
 
 
+label define outcomes_phys 0 "0 attrition" 1 "1 ownership" 2 "2 rent" 3 "3 rent-buy scheme" 4 "4 rent free" 11 "1.1 physical downgrade" 12 "1.2 size unchanged" 13 "1.3 physical upgrade"
+label values failure outcomes_phys
+tab failure if wave==1 & failure != 1 & failure != 3 //divide ownership change by size of new home
+*/
 
 //1.c As above but divide move into another ownership phase into financial upgrade and downgrade 
 
@@ -96,9 +100,11 @@ replace failure = 11 if financialchange ==1 & failure == 1 //downsize
 replace failure = 12 if financialchange ==2 & failure == 1 //downsize 
 replace failure = 13 if financialchange ==3 & failure == 1 
 
-//financial upgrade is more likely than physical upgrade
+label define outcomes_phys 0 "0 attrition" 1 "1 ownership" 2 "2 rent" 3 "3 rent-buy scheme" 4 "4 rent free" 11 "1.1 financial downgrade" 12 "1.2 +/- 10,000" 13 "1.3 financial upgrade"
+label values failure outcomes_phys
+tab failure if wave==1 & failure != 1 & failure != 3 //divide ownership change by value of new home
 
-tab failure if wave==1
+//financial upgrade is more likely than physical upgrade
 
 
 /*

@@ -38,13 +38,18 @@ global data_output "$folder_path/output"
 clear 
 
 local varstokeep hgsex hgage hgyob ghgh ghpf mrcurr tchad hhd0_4 esdtl edhigh1 hhsad10 /// 
-hstenr hstenur mhli mhlyr hsyr hhadst lemvd rpsold hsvalue hsvalui hsprice losathl losatnl hsbedrm ///
+hstenr hstenur mhli mhlyr hsyr hhadst lemvd rpsold hsvalue hsdebt hsvalui hsvaluf hsdebti hsdebtf hsprice losathl losatnl hsbedrm ///
 es esbrd esdtl esempdt esempst estjb rtage rt5yr lertr rtcomp rtcompn rtcrpr rtstat rtyr ///
 hxyhmrn hxyhmri hsdebt hsdebti hsmg hsmgowe hwhmeip rtmfmv ///
 hhtup ///
 saest saval savaln savaln2 rtsup rtlump sacfnd2 sacfndr sacfnda sacfnd /// super
-bnage bncap bncapa /// age pension
+bnage bnage1 bncap bncapa /// age pension
 lejob pjsemp pjmsemp /// job change 
+rt5yr rtsup rtlump rtconv rtcamt rtclgp rtcabp rtcos rtcrf rtcdk /// retirement module variables 
+rtrsls rtrsadf rtrsie rtrspd rtrslei rtrsafm rtrsos rtrsrf rtrsdk ///
+rtamtpd rtamtle rtamtfm rtcklsr rtlspa ///
+rtlsp11 rtlsp12 rtlsp13 rtlsp14 rtlsp15 rtlsp16 ///
+rtcage rtpage rtstat rtcklsa ///
 
 
 	 
@@ -83,18 +88,13 @@ mvdecode _all, mv(-1=.a \ -2=.b \ -3=.c \ -4=.d \ -5=.e \ -6=.f \ -7=.g \ -8=.h 
 
 label dir //put all the labels in macro called r(names)
 
+
 foreach lab in `r(names)' {
-   label define `lab' -1 "", modify
-   label define `lab' -2 "", modify
-   label define `lab' -3 "", modify
-   label define `lab' -4 "", modify
-   label define `lab' -5 "", modify
-   label define `lab' -6 "", modify
-   label define `lab' -7 "", modify
-   label define `lab' -8 "", modify
-   label define `lab' -9 "", modify
-   label define `lab' -10 "", modify
-	 
+	
+	forval i = 1/10{
+		label define `lab' -`i' "", modify
+	}
+ 
    label define `lab' .a "[.a] Not asked", modify
    label define `lab' .b "[.b] Not applicable", modify
    label define `lab' .c "[.c] Don't know", modify
@@ -106,7 +106,6 @@ foreach lab in `r(names)' {
    label define `lab' .i "[.i] Non-responding household", modify
    label define `lab' .j "[.j] Non-responding person", modify
 }
-
 
 
 ******
