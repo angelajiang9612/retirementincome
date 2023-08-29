@@ -29,9 +29,9 @@ local varstokeep hgsex hgage hgyob ghgh ghpf mrcurr tchad hhd0_4 esdtl edhigh1 h
 hstenr hstenur mhli mhlyr hsyr hhadst lemvd rpsold hsvalue hsvalui hsprice losathl losatnl hsbedrm ///
 es esbrd esdtl esempdt esempst estjb rtage rt5yr lertr rtcomp rtcompn rtcrpr rtstat rtyr ///
 hxyhmrn hxyhmri hsdebt hsdebti hsmg hsmgowe hwhmeip rtmfmv ///
-hhtup ///
+hhtup 2///
 saest saval savaln savaln2 rtsup rtlump sacfnd2 sacfndr sacfnda sacfnd /// super
-bnage bncap bncapa /// age pension
+bnage bnage1 bncap bncapa /// age pension
 lejob pjsemp pjmsemp /// job change 
 rt5yr rtsup rtlump rtconv rtcamt rtclgp rtcabp rtcos rtcrf rtcdk ///
 rtrsls rtrsadf rtrsie rtrspd rtrslei rtrsafm rtrsos rtrsrf rtrsdk /// used for 

@@ -34,45 +34,6 @@ compress
 xtset id wave //set as panel 
 //using birth year and age at the June 30 to generate preservation age 
 
-////////////////////////////
-
-//generate cond_changed, variable that indicates the first time the person met condition of release for super
-//probably still noisy 
-
-////////////////////////////
-
-gen changed_cpq =1 if pjsemp ==2  //this is only asked of last period employed people 
-replace changed_cpq =0 if pjsemp ==1
-replace changed_cpq =1 if pjmsemp ==2 //main job for multiple employers 
-replace changed_cpq =0 if pjmsemp ==1 //result is 60% missing overall and 14 percent missing for employed people 
-
-gen changed_scq =1 if lejob ==2
-replace changed_scq =0 if lejob ==1
-
-gen j_changed =1 if changed_scq==1 | changed_cpq ==1
-replace j_changed =0 if (changed_scq ==0 & changed_cpq ==0) | (changed_scq ==0 & changed_cpq ==.) | (changed_scq ==. & changed_cpq ==0) //if reported zero in both or zero in one and missing in the other 
-
-gen reached_page = (hgage >= p_age & !missing(hgage))
-gen sixty_plus = (hgage >= 60 & !missing(hgage))
-
-gen cond_release1 =1 if reached_page==1 & retirement_status==1
-gen cond_release2 =1 if sixty_plus ==1 & j_changed==1 
-gen cond_release3 =1 if hgage>= 65
-
-forval i= 1/3 {
-	bysort id (wave): replace cond_release`i'=1 if cond_release`i'[_n-1] ==1 
-	replace cond_release`i' =0 if missing(cond_release`i')
-	by id: gen cond_changed`i' =1 if cond_release`i' - cond_release`i'[_n-1] ==1 
-	replace cond_changed`i' =0 if missing(cond_changed`i')
-}
-
-gen cond_release =1 if cond_release1 ==1 | cond_release2 ==1 | cond_release3 ==1
-bysort id (wave): replace cond_release=1 if cond_release[_n-1] ==1 
-replace cond_release =0 if missing(cond_release)
-by id: gen cond_changed =1 if cond_release - cond_release[_n-1] ==1 
-replace cond_changed =0 if missing(cond_changed)
-
-
 gen p_observed =1 if hgage ==p_age
 
 bysort id: egen keep = max(p_observed)
@@ -91,19 +52,8 @@ gen timesince = wave - ewave //relative time to event
 //////////////////////////////////////////////////
 
 
-/////////////////////////////////////////////////
-//Generate Housing Related Variables  
-////////////////////////////////////////////////
-
-gen home_equity = hsvalui - hsdebti  //both of the imputed value already have no missing values and has hsvalui equal to 0 for the not asked cases 
-
-//should deflate to 2001 dollars or something
-
 gen flag =1 if hstenr==1 & cond_changed==1 //generate variable for being owner at when cond changed, 2182 people left
 bysort id: egen own_at_change = max(flag)
-
-
-
 
 ////////////////////////////////////////////////////
 
@@ -113,30 +63,43 @@ lgraph lfp timesince, xline(0, lcolor(green)) nomarker
 
 /////////////////////////////////////////////////////
 
-
 //home equity around when a person gains access to superannuation 
 
-lgraph home_equity timesince super_quart if own_at_change==1 & timesince <=10 & timesince >= -10, xline(0, lcolor(green)) nomarker //owners, there appear to be some movement around super access (could be just due to retirement), the highest super quartile one change is steeper. 
+//owners 
 
-lgraph hsdebti timesince super_quart if own_at_change==1 & timesince <=10 & timesince >= -10, xline(0, lcolor(green)) nomarker //debt 
+lgraph home_equity timesince if own_at_change==1 & timesince <=10 & timesince >= -10, xline(0, lcolor(green)) nomarker ytitle("home equity (thousands)") xtitle("super access"), //owners, there appear to be some movement around super access (could be just due to retirement), the highest super quartile one change is steeper ---this artificially restricts to be owner at change, so make it seem more steep 
 
+lgraph home_equity timesince super_quart if own_at_change==1 & timesince <=10 & timesince >= -10, xline(0, lcolor(green)) nomarker ytitle("home equity (thousands)"  xtitle("super access")) //owners, there appear to be some movement around super access (could be just due to retirement), the highest super quartile one change is steeper. 
+
+lgraph home_debt timesince if own_at_change==1 & timesince <=10 & timesince >= -10, xline(0, lcolor(green)) nomarker ytitle("home debt (thousands)" xtitle("super access")) //debt 
+
+lgraph home_maintenance timesince if own_at_change==1 & timesince <=10 & timesince >= -10, xline(0, lcolor(green)) nomarker ytitle("home maintenance (thousands)"  xtitle("super access")) //owners, 
+
+lgraph home_value timesince if own_at_change==1 & timesince <=10 & timesince >= -10, xline(0, lcolor(green)) nomarker ytitle("home value (thousands)"  xtitle("super access")) //owners, home value for some reason peak around super access 
 
 /////////////////////////////////////////////////////
 
+//all people 
 
 
+lgraph home_equity timesince if timesince <=15 & timesince >= -15, xline(0, lcolor(green)) nomarker ytitle("home equity (thousands)") xtitle("super access") //
+
+lgraph home_equity timesince super_quart if timesince <=10 & timesince >= -10, xline(0, lcolor(green)) nomarker ytitle("home equity (thousands)"  xtitle("super access")) //owners, there appear to be some movement around super access (could be just due to retirement), the highest super quartile one change is steeper. 
+
+lgraph home_debt timesince if timesince <=10 & timesince >= -10, xline(0, lcolor(green)) nomarker ytitle("home debt (thousands)") xtitle("super access") //debt 
+
+lgraph home_maintenance timesince if & timesince <=10 & timesince >= -10, xline(0, lcolor(green)) nomarker ytitle("home maintenance (thousands)")  xtitle("super access") //owners, there appear to be some movement around super access (could be just due to retirement), the highest super quartile one change is steeper
+
+lgraph home_value timesince if timesince <=10 & timesince >= -10, xline(0, lcolor(green)) nomarker ytitle("home value (thousands)") xtitle("super access") //owners, there appear to be some movement around super access (could be just due to retirement), the highest super quartile one change is steeper
 
 
+//financial and physical upgrade for owners 
 
 
+lgraph upgrade_financial timesince if timesince <=10 & timesince >= -10, xline(0, lcolor(green)) nomarker  //owners, home value for some reason peak around super access  //financial upgrade peaks around super access/retirement, then declines. 
 
 
-
-
-lgraph own timesince_a if super_quart==3 | super_quart==4 , xline(0, lcolor(green)) nomarker //not sure why there is a weird dip in the middle. 
-
-
-
+lgraph upgrade_physical timesince if own_at_change==1 & timesince <=10 & timesince >= -10, xline(0, lcolor(green)) nomarker  //owners, home value for some reason peak around super access 
 
 
 

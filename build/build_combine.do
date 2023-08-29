@@ -37,12 +37,14 @@ global data_output "$folder_path/output"
 
 clear 
 
-local varstokeep hgsex hgage hgyob ghgh ghpf mrcurr tchad hhd0_4 esdtl edhigh1 hhsad10 /// 
+local varstokeep hhid hgsex hgage hgyob ghgh ghpf mrcurr tchad hhd0_4 esdtl edhigh1 hhsad10 hhs3gcc /// 
 hstenr hstenur mhli mhlyr hsyr hhadst lemvd rpsold hsvalue hsdebt hsvalui hsvaluf hsdebti hsdebtf hsprice losathl losatnl hsbedrm ///
 es esbrd esdtl esempdt esempst estjb rtage rt5yr lertr rtcomp rtcompn rtcrpr rtstat rtyr ///
 hxyhmrn hxyhmri hsdebt hsdebti hsmg hsmgowe hwhmeip rtmfmv ///
 hhtup ///
 saest saval savaln savaln2 rtsup rtlump sacfnd2 sacfndr sacfnda sacfnd /// super
+pwsuprt pwsupri pwsuprf pwsupwi pwsupwk pwsupwf hwsupei hwsupri hwsupwi hwsuprt hwsupwk hwsuprf hwsupwf /// super cleaned up
+hxygrci hxyalci hxycigi hxypbti hxymli hxymvfi hxymcfi hxywcfi hxyccfi hxytlii hxyphii hxyoii hxyhlpi hxyphmi hxyutil hxyhmrn hxymvr hxyeduc /// expenditure 
 bnage bnage1 bncap bncapa /// age pension
 lejob pjsemp pjmsemp /// job change 
 rt5yr rtsup rtlump rtconv rtcamt rtclgp rtcabp rtcos rtcrf rtcdk /// retirement module variables 
@@ -50,7 +52,8 @@ rtrsls rtrsadf rtrsie rtrspd rtrslei rtrsafm rtrsos rtrsrf rtrsdk ///
 rtamtpd rtamtle rtamtfm rtcklsr rtlspa ///
 rtlsp11 rtlsp12 rtlsp13 rtlsp14 rtlsp15 rtlsp16 ///
 rtcage rtpage rtstat rtcklsa ///
-
+hifditn hifditp hwfini ghpf mrcurr hhpers ///demographic controls 
+jbmmply jbmemsz jbmi61 jbmi62 jbmo61 jbmo62/// job features 
 
 	 
 local i = 0

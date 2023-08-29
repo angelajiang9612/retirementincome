@@ -1,0 +1,28 @@
+----------------------------------------------
+                              (1)             
+                        home_debt             
+                             coef           se
+----------------------------------------------
+0bL.cond_release                             .
+1L.cond_release                        3093.26
+4 quantiles of sup~2                         .
+4 quantiles of sup~3                         .
+4 quantiles of sup~4                         .
+0bL.cond_release #~u                         .
+0bL.cond_release #~u                         .
+0bL.cond_release #~u                         .
+1L.cond_release # ~u                   3924.81
+1L.cond_release # ~u                   4156.61
+1L.cond_release # ~u                   4851.46
+L.DV: Age last bi~30                    167.25
+L.hhs_income                             11.19
+L.Interpolation of~e                      2.20
+L.DV: [SCQ] SF-36 ~o                     31.28
+L.retirement_stat                      1780.09
+L.partner                              3399.60
+L.hhpersons                            1432.00
+Constant                              13989.06
+----------------------------------------------
+r2                           0.04             
+N                        47098.00             
+----------------------------------------------

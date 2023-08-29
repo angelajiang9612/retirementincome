@@ -1,8 +1,8 @@
-----------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  /Users/bubbles/Desktop/Retirement_Income/dofile/describe_super.log
   log type:  text
- opened on:   3 Jul 2023, 18:01:18
+ opened on:  29 Aug 2023, 11:15:38
 
 . 
 . global folder_path "/Users/bubbles/Desktop/Hilda" 
@@ -27,24 +27,28 @@ Panel variable: id (unbalanced)
 
 . 
 . //infile the result of build_combine, output a data file with key constructed variables. 
-. //this do file generate some key variables///
+. //this do file generate some key variables//
+. 
 . 
 . /////////////////////////////////////////////////////////////////////////////////////////////
 > //Generate variable retired for changing from labor force to retired in that period/ 
 . ////////////////////////////////////////////////////////////////////////////////////////////
 > 
 . //variables used rtcomp rtcompn rtstat lertr
+. //generated variables retirement_stat and retire (whether retired in that period or noy)
 . //should try with rtcage (At what age did you completely retire) to see how many matches. 
 . //retirement means completely retired. 
-. //currently uses retirement status questions first and then replace with self reported retirement change if missing, because the
->  status questions are in more salient retirement sections and the life event questions are mixed with other types of questions a
-> nd are in SCQs, can try the other way around too. 
+. //currently uses retirement status questions first and then replace with self reported retirement change if missing, because the s
+> tatus questions are in more salient retirement sections and the life event questions are mixed with other types of questions and a
+> re in SCQs, can try the other way around too. 
 . 
 . gen lfp =(esbrd==1 | esbrd==2) //labor force participation 
 
+. replace lfp =. if missing(esbrd)
+(111,423 real changes made, 111,423 to missing)
+
 . 
 . //recode rtcomp rtcompn rtstat .a(not asked) to 0, all to 1/0, 1 being completely retired
-. 
 . 
 . mvencode rtcomp rtcompn rtstat, mv(.a = 0) //people who are still working are not asked. 
       rtcomp: 203917 missing values recoded
@@ -60,23 +64,23 @@ Panel variable: id (unbalanced)
 
 . 
 . //
-. gen retirement_status = rtcomp 
+. gen retirement_stat = rtcomp 
 (167,666 missing values generated)
 
-. replace retirement_status = rtcompn if missing(retirement_status)
+. replace retirement_stat = rtcompn if missing(retirement_stat)
 (29,114 real changes made, 16,134 to missing)
 
-. replace retirement_status = rtstat if missing(retirement_status)
+. replace retirement_stat = rtstat if missing(retirement_stat)
 (131,856 real changes made, 88,751 to missing)
 
 . 
 . sort id 
 
-. by id: gen retired_change = retirement_status -  retirement_status[_n-1]   
+. by id: gen retired_change = retirement_stat -  retirement_stat[_n-1]   
 (147,134 missing values generated)
 
-. gen retired = retired_change if retired_change ==0 | retired_change ==1 //this is whether went from non-retired to retired in th
-> at period, ignoring re-entered workforce for now. 
+. gen retire = retired_change if retired_change ==0 | retired_change ==1 //this is whether went from non-retired to retired in that 
+> period, ignoring re-entered workforce for now. 
 (152,078 missing values generated)
 
 . 
@@ -84,13 +88,20 @@ Panel variable: id (unbalanced)
 . recode lertr (1 = 0) (2 = 1) //make retired 1 and not retired 0 
 (273,807 changes made to lertr)
 
-. replace retired = lertr if missing(retired)
-(132,164 real changes made, 109,944 to missing)
+. replace retire = lertr if missing(retired)
+(127,220 real changes made, 109,358 to missing)
 
 . 
 . 
-. //superannuation 
 . 
+. 
+. 
+. 
+. 
+. /////////////////////////////////////////////
+> ///////////////SUPER VARIABLES//////////////
+> //////////////////////////////////////////////
+> 
 . 
 . //generate superannuation preservation age using birth year and current age. 
 . 
@@ -132,192 +143,283 @@ Panel variable: id (unbalanced)
 
 . 
 . //generate indicator for reaching condition of release 
+. //outcome variable cond_changed =1 in the period when condition of release is reached, 0 in other periods. 
+. 
+. gen changed_cpq =1 if pjsemp ==2  //this is only asked of last period employed people 
+(410,794 missing values generated)
+
+. replace changed_cpq =0 if pjsemp ==1
+(133,364 real changes made)
+
+. replace changed_cpq =1 if pjmsemp ==2 //main job for multiple employers 
+(3,072 real changes made)
+
+. replace changed_cpq =0 if pjmsemp ==1 //result is 60% missing overall and 14 percent missing for employed people 
+(11,104 real changes made)
+
+. 
+. gen changed_scq =1 if lejob ==2
+(397,025 missing values generated)
+
+. replace changed_scq =0 if lejob ==1
+(237,547 real changes made)
+
+. 
+. gen j_changed =1 if changed_scq==1 | changed_cpq ==1
+(390,126 missing values generated)
+
+. replace j_changed =0 if (changed_scq ==0 & changed_cpq ==0) | (changed_scq ==0 & changed_cpq ==.) | (changed_scq ==. & changed_cpq
+>  ==0) //if reported zero in both or zero in one and missing in the other 
+(247,816 real changes made)
+
+. 
+. gen reached_page = (hgage >= p_age & !missing(hgage))
+
+. gen sixty_plus = (hgage >= 60 & !missing(hgage))
+
+. 
+. gen cond_release1 =1 if reached_page==1 & retirement_stat==1
+(376,925 missing values generated)
+
+. gen cond_release2 =1 if sixty_plus ==1 & j_changed==1 
+(431,821 missing values generated)
+
+. gen cond_release3 =1 if hgage>= 65
+(374,972 missing values generated)
+
+. 
+. forval i= 1/3 {
+  2.         bysort id (wave): replace cond_release`i'=1 if cond_release`i'[_n-1] ==1 
+  3.         replace cond_release`i' =0 if missing(cond_release`i')
+  4.         by id: gen cond_changed`i' =1 if cond_release`i' - cond_release`i'[_n-1] ==1 
+  5.         replace cond_changed`i' =0 if missing(cond_changed`i')
+  6. }
+(7,490 real changes made)
+(369,435 real changes made)
+(428,269 missing values generated)
+(428,269 real changes made)
+(5,420 real changes made)
+(426,401 real changes made)
+(432,284 missing values generated)
+(432,284 real changes made)
+(0 real changes made)
+(374,972 real changes made)
+(429,315 missing values generated)
+(429,315 real changes made)
+
+. 
+. gen cond_release =1 if cond_release1 ==1 | cond_release2 ==1 | cond_release3 ==1
+(358,971 missing values generated)
+
+. bysort id (wave): replace cond_release=1 if cond_release[_n-1] ==1 
+(0 real changes made)
+
+. replace cond_release =0 if missing(cond_release)
+(358,971 real changes made)
+
+. by id: gen cond_changed =1 if cond_release - cond_release[_n-1] ==1 
+(428,774 missing values generated)
+
+. replace cond_changed =0 if missing(cond_changed)
+(428,774 real changes made)
+
+. 
+. //deflation of super value to 2012 real dollars 
+. 
+. gen year = wave + 2000 
+
+. 
+. local years 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016 2017 2018 2019 2020 2021 
+
+. local cpi 73.9 76.1 78.6 80.2 82.1 84.5 86.6 90.3 92.5 95.2 98.3 99.9 102.4 105.4 106.8 108.2 110.5 112.6 114.1 116.6 117.9 
+
+. 
+. local n: word count `years'
+
+. 
+. forval i = 1/`n' {
+  2.         local y: word `i' of `years'
+  3.         local ind: word `i' of `cpi' 
+  4.         replace pwsupri = pwsupri/`ind'*100 if year == `y' 
+  5.         replace pwsupwi = pwsupwi/`ind'*100 if year == `y' 
+  6.         replace pwsuprt = pwsuprt/`ind'*100 if year == `y' 
+  7.         replace pwsupwk = pwsupwk/`ind'*100 if year == `y' 
+  8. }  
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+variable pwsupri was long now double
+(706 real changes made)
+variable pwsupwi was long now double
+(8,553 real changes made)
+variable pwsuprt was long now double
+(5,926 real changes made, 5,389 to missing)
+variable pwsupwk was long now double
+(13,402 real changes made, 6,058 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(778 real changes made)
+(8,840 real changes made)
+(5,347 real changes made, 4,637 to missing)
+(13,125 real changes made, 5,530 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(819 real changes made)
+(9,663 real changes made)
+(5,170 real changes made, 4,441 to missing)
+(13,703 real changes made, 5,362 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(1,300 real changes made)
+(12,426 real changes made)
+(6,902 real changes made, 5,756 to missing)
+(17,646 real changes made, 6,739 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(1,543 real changes made)
+(12,470 real changes made)
+(7,367 real changes made, 6,004 to missing)
+(17,888 real changes made, 7,081 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+
+. 
+. 
+. /////////////////////////////////////////////
+> //Reach Preservation Age & Gain Access Events/
+. //////////////////////////////////////////////
+> 
+. 
+. //generate event reaching preservation age 
+. 
+. gen event=(p_age == hgage)
+
+. by id: egen p_wave = max(cond(event!=0, wave, .)) //record wave event took place, max ignore missing values automatically 
+(359,542 missing values generated)
+
+. gen time_p = wave - p_wave //relative time to event 
+(359,542 missing values generated)
+
+. 
+. 
+. //generate event change in access condition 
+. gen event_a=(cond_changed == 1) 
+
+. by id: egen a_wave = max(cond(event_a!=0, wave, .)) //record wave event took place, max ignore missing values automatically 
+(360,262 missing values generated)
+
+. gen time_a = wave - a_wave //relative time to event 
+(360,262 missing values generated)
+
+. 
+. //generate event retired (need to adjust for household size etc later)
+. 
+. gen event_r=(retire == 1) 
+
+. by id: egen r_wave = max(cond(event_r!=0, wave, .)) //record wave event took place, max ignore missing values automatically 
+(330,887 missing values generated)
+
+. gen time_r = wave - r_wave //relative time to event 
+(330,887 missing values generated)
+
 . 
 . 
 . /*
-> //gen job change indicator 
+> small numbers 
+> //dropping some inconsistencies 
+> drop if rtcomp ==1 & pwsupwi!=0 & inlist(wave,2,6,10,14,18) //retired but has non retired super, 1 case
+> drop if rtcomp ==0 & pwsupri!=0 & inlist(wave,2,6,10,14,18) // not retired but has retired super, 140 cases 
+> drop if pwsupri!=0 & pwsupwi!=0 & inlist(wave,2,6,10,14,18) //cases where they are both not 0, 165 cases, rtcomp status not respon
+> ding
 > 
-> gen changed_cpq =1 if pjsemp ==2  //this is only asked of last period employed people 
-> replace changed_cpq =0 if pjsemp ==1
-> replace changed_cpq =1 if pjmsemp ==2 
-> replace changed_cpq =0 if pjmsemp ==1 //result is 60% missing overall and 14 percent missing for employed people 
-> 
-> gen changed_scq =1 if lejob ==2
-> replace changed_scq =0 if lejob ==1
-> 
-> gen j_changed =1 if changed_scq==1 | changed_cpq ==1
-> replace j_changed =0 if missing(j_changed) & !missing(changed_cpq) & !missing(changed_scq) //try to keep the rest as missing, th
-> is doesn't to result in too many changes 
-> 
-> gen reached_page = (hgage >= p_age & !missing(hgage))
-> gen sixty_plus = (hgage >= 60 & !missing(hgage))
-> 
-> gen cond_release =1 if reached_page==1 & retirement_status==1
-> replace cond_release =1 if sixty_plus ==1 & j_changed==1
-> replace cond_release=1 if hgage>= 65
-> sort id wave 
-> by id: replace cond_release=1 if cond_release[_n-1] ==1
-> replace cond_release =0 if missing(cond_release)
-> by id: gen cond_changed =1 if cond_release - cond_release[_n-1] ==1
-> replace cond_changed =0 if missing(cond_changed)
-> 
+> //note that pwsupwi and pwsupri are never missing, they are set to zero when non applicable. 
+> //when both pwsupwi and pwsupri are zero and rtcomp is missing it is not clear whether this person should count as retired or not.
+>  Check if there is a derived variable for retirement. Can email HILDA
 > */ 
 . 
+. //combining retired and non-retired super 
 . 
+. gen super_c = pwsupwi + pwsupri //total super, still super noisy
+(333,131 missing values generated)
+
+. bys id: ipolate super_c wave, generate(super_i)
+(142035 missing values generated)
+
+. bys id: egen super_atr = max(cond(retire==1, super_i, .)) //super at retirement 
+(350,668 missing values generated)
+
+. bys id: egen super_atp = max(cond(p_age == hgage, super_i, .)) //super at p_age 
+(374,258 missing values generated)
+
+. bys id: egen super_ata = max(cond(cond_changed == 1, super_i, .)) //super at access 
+(376,428 missing values generated)
+
 . 
+. xtile quart_r = super_atr, nq(4) //note that the first 25 percent doesnt't have any super, this is probably misleading, many peopl
+> e already ran down their super 
+
+. xtile quart_p = super_atp, nq(4)
+
+. xtile oct_p = super_atp, nq(8)
+
+. xtile quart_a = super_ata, nq(4)
+
 . 
-. 
-. ///////superannuation amount/////
+. /////////////////////////////////////////////
+> ///////////////HOUSING VARIABLES//////////////
+> //////////////////////////////////////////////
 > 
-. //need to check how reasonable the interpolations are in a more rigorous way later
-. //should check the topcode thing, HILDA provides the actual top code cutoff
-. //the current problem with the interpolations is they intepolate outside their section (retired vs not retired)
-. //need to figure out why 6000 observations have non missing value for both super_int and super_intr
-. //1.45% missing, probably related to top-up sample need to check 
-. //think about doing within group (retirement, in labor force) extapolation as well
-. 
-. 
-. 
-. //////generate yearly estimates for the value of superannuation/////////
-> 
-. 
-. //for those who are not completely retired 
-. 
-. //modify the brackets saval savaln savaln2 
-. 
-. recode saval (1 = 2500) (2 = 12500)  (3 = 35000)  (4 = 75000)  (5 = 150000)  (6 = 350000)  (7 = 500000) (10 = 0) //replace brack
-> et by bracket midvalue or value in the case of max bracket
-(9,192 changes made to saval)
-
-. 
-. recode savaln (1 = 2500) (2 = 12500)  (3 = 35000)  (4 = 75000)  (5 = 150000)  (6 = 350000)  (7 = 750000) (8 = 1000000) (10 = 0) 
-> //replace bracket by bracket midvalue or value in the case of max bracket
-(9,065 changes made to savaln)
-
-. 
-. recode savaln2 (1 = 2500) (2 = 12500)  (3 = 35000)  (4 = 75000)  (5 = 150000)  (6 = 350000)  (7 = 750000) (8 = 1500000) (9 = 350
-> 0000) (10 = 5000000) (97 = 0) //replace bracket by bracket midvalue or value in the case of max bracket
-(34,606 changes made to savaln2)
-
-. 
-. 
-. gen super_bracket = saval
-(423,923 missing values generated)
-
-. replace super_bracket = savaln if missing(super_bracket)
-(26,556 real changes made, 17,491 to missing)
-
-. replace super_bracket = savaln2 if missing(super_bracket)
-(72,624 real changes made, 38,018 to missing)
-
-. 
-. gen super_value =saest //estimation of actual value 
-(394,144 missing values generated)
-
-. replace super_value = super_bracket if missing(super_value) & !missing(super_bracket)
-(13,892 real changes made)
-
-. 
-. by id: ipolate super_value wave, generate(super_estimate) //generate int super_estimate, do not extrapolate because people will 
-> retire and super will then decline
-(281026 missing values generated)
-
-. //replace super_estimate = 0 if super_estimate <0 //no negative values for super //no need no extrapolate 
-. 
-. egen max_1 = max(saest)  
-
-. replace super_estimate = max_1 if super_estimate > max_1 & super_estimate != . //can't exceed the max of reported value
-(46 real changes made)
-
-. drop max_1
-
-. replace super_estimate=0 if hgage <15 //children below legal working age has no super
-(91,593 real changes made)
-
-. 
-. ///those who are completely retired
-> 
-. recode sacfndr (1 = 2500) (2 = 12500)  (3 = 35000)  (4 = 75000)  (5 = 150000)  (6 = 350000)  (7 = 750000) (8 = 1000000) (10 = 0)
->  //replace bracket by bracket midvalue or value in the case of max bracket
-(711 changes made to sacfndr)
-
-. 
-. recode sacfnd2 (1 = 2500) (2 = 12500)  (3 = 35000)  (4 = 75000)  (5 = 150000)  (6 = 350000)  (7 = 750000) (8 = 1500000) (9 = 350
-> 0000) (10 = 5000000) (97 = 0) //replace bracket by bracket 
-(3,247 changes made to sacfnd2)
-
-. 
-. gen super_bracketr = sacfnd2 //this is combination of super, allocated pension and annuity assets
-(429,868 missing values generated)
-
-. replace super_bracketr = sacfndr if missing(super_bracketr)
-(78,442 real changes made, 77,731 to missing)
-
-. 
-. 
-. gen super_valuer = sacfnda
-(428,877 missing values generated)
-
-. replace super_valuer = super_bracketr if missing(super_valuer) & !missing(super_bracketr) 
-(257 real changes made)
-
-. 
-. by id: ipolate super_valuer wave, generate(super_estimater) //generate int super_estimate
-(421761 missing values generated)
-
-. egen max_2 = max(sacfnda) 
-
-. replace super_estimater = max_2 if super_estimater > max_2 & super_estimater != . //can't exceed the max of reported value
-(13 real changes made)
-
-. drop max_2
-
-. 
-. 
-. //overall superannuation estimate that combines retired and not retired groups
-. 
-. //need to figure out why 6000 observations have non missing value for both super_int and super_intr
-. 
-. gen super_c = super_estimate if retirement_status == 0
-(283,091 missing values generated)
-
-. replace super_c = super_estimater if retirement_status == 1
-(10,456 real changes made)
-
-. 
-. replace super_c = super_estimate if missing(super_estimater) & !missing(super_estimate)
-(93,499 real changes made)
-
-. replace super_c = super_estimater if !missing(super_estimater) & missing(super_estimate)
-(749 real changes made)
-
-. 
-. //final interpolation (should check again to see if int for transitions from employed to retired make sense), shouldn't extrapol
-> ate yet
-. 
-. by id: ipolate super_c wave, generate(super_final) //generate int super_estimate, do not extrapolate because people will retire 
-> and super will then decline
-(167249 missing values generated)
-
-. 
-. 
-. gen super_at_retirement= super_final if retired ==1
-(430,232 missing values generated)
-
-. 
-. bysort id: egen super=max(super_at_retirement)
-(393,620 missing values generated)
-
-. xtile super_quart = super, nq(4)
-
-. 
-. 
-. //come up with some permanent superannuation component or something that would allow more super annuation information to be used
-> . 
-. 
-. 
-. //construct housing variables 
-. 
 . 
 . gen move_address = mhli
 (145,461 missing values generated)
@@ -327,6 +429,124 @@ Panel variable: id (unbalanced)
 (242,024 changes made to move_address)
 
 . 
+. //housing related monetary values, adjust to 2012 dollars and in thousands. 
+. 
+. //home maintenance costs (note this is household total, imputed values, some missing values exist)
+. 
+. gen home_maintenance =hxyhmri
+(73,108 missing values generated)
+
+. 
+. //home equity and home maintenance(resident home)
+. 
+. //adjust to 2012 real dollars 
+. 
+. gen home_equity = hsvalui - hsdebti 
+
+. gen home_debt = hsdebti 
+
+. gen home_value = hsvalui
+
+. 
+. forval i = 1/`n' {
+  2.         local y: word `i' of `years'
+  3.         local ind: word `i' of `cpi' 
+  4.         replace home_equity = home_equity/`ind'*100 if year == `y' //adjust for inflation and convert to thousands 
+  5.         replace home_maintenance = home_maintenance/`ind'*100 if year == `y'
+  6.         replace home_debt = home_debt/`ind'*100 if year == `y'
+  7.         replace home_value = home_value/`ind'*100 if year == `y'
+  8. }  
+(14,278 real changes made)
+(0 real changes made)
+(8,165 real changes made)
+(14,315 real changes made)
+(13,166 real changes made)
+(0 real changes made)
+(7,666 real changes made)
+(13,184 real changes made)
+(12,616 real changes made)
+(0 real changes made)
+(7,612 real changes made)
+(12,656 real changes made)
+(12,253 real changes made)
+(0 real changes made)
+(7,317 real changes made)
+(12,271 real changes made)
+(12,291 real changes made)
+(11,233 real changes made)
+(7,486 real changes made)
+(12,324 real changes made)
+(12,165 real changes made)
+(10,742 real changes made)
+(7,520 real changes made)
+(12,204 real changes made)
+(12,027 real changes made)
+(10,618 real changes made)
+(7,517 real changes made)
+(12,086 real changes made)
+(11,926 real changes made)
+(10,782 real changes made)
+(7,501 real changes made)
+(12,012 real changes made)
+(12,007 real changes made)
+(10,561 real changes made)
+(7,623 real changes made)
+(12,064 real changes made)
+(12,079 real changes made)
+(10,809 real changes made)
+(7,771 real changes made)
+(12,120 real changes made)
+(15,514 real changes made)
+(15,169 real changes made)
+(9,879 real changes made)
+(15,578 real changes made)
+(15,358 real changes made)
+(14,844 real changes made)
+(9,821 real changes made)
+(15,432 real changes made)
+(15,247 real changes made)
+(14,692 real changes made)
+(9,836 real changes made)
+(15,299 real changes made)
+(15,131 real changes made)
+(14,998 real changes made)
+(9,794 real changes made)
+(15,163 real changes made)
+(15,278 real changes made)
+(15,052 real changes made)
+(9,846 real changes made)
+(15,335 real changes made)
+(15,283 real changes made)
+(14,947 real changes made)
+(9,850 real changes made)
+(15,326 real changes made)
+(15,218 real changes made)
+(14,517 real changes made)
+(9,696 real changes made)
+(15,275 real changes made)
+(15,102 real changes made)
+(14,456 real changes made)
+(9,780 real changes made)
+(15,146 real changes made)
+(15,020 real changes made)
+(14,604 real changes made)
+(9,674 real changes made)
+(15,062 real changes made)
+(14,857 real changes made)
+(13,514 real changes made)
+(9,524 real changes made)
+(14,903 real changes made)
+(14,579 real changes made)
+(12,727 real changes made)
+(9,276 real changes made)
+(14,637 real changes made)
+
+. 
+. 
+. //other home loan variables 
+. 
+. rename hsmgpd homeloan_any
+
 . 
 . //generate upgrade/downgrade indicators//
 . 
@@ -337,243 +557,347 @@ Panel variable: id (unbalanced)
 (127,587 changes made to own)
 
 . 
-. by id: gen upgrade_financial = (hstenr[_n-1] == 1 & hstenr ==1 & mhli==1 &  hsvalui > hsvalui[_n-1])
+. by id: gen upgrade_financial = (hstenr[_n-1] == 1 & hstenr ==1 & mhli==1 &  hsvalui > hsvalui[_n-1]) //owners in both period, move
+> d between periods, value of home increased. 
 
-. 
 . by id: gen downgrade_financial = (hstenr[_n-1] == 1 & hstenr ==1 & mhli==1 &  hsvalui < hsvalui[_n-1])
 
-. 
 . by id: gen upgrade_physical = (hstenr[_n-1] == 1 & hstenr ==1 & mhli==1 &  hsbedrm > hsbedrm[_n-1] )
 
-. 
 . by id: gen downgrade_physical = (hstenr[_n-1] == 1 & hstenr ==1 & mhli==1 &  hsbedrm < hsbedrm[_n-1])
 
-. 
 . by id: gen rent_to_own =((hstenr[_n-1] == 2 |  hstenr[_n-1] == 4) & hstenr ==1)
 
-. 
 . by id: gen own_to_rent = (hstenr[_n-1] == 1 & (hstenr == 2 |  hstenr == 4))
 
 . 
 . 
-. //constructing age pension variable 
+. /////////////////////////////////////////////
+> ///////////////Expenditure Variables/////////
+> //////////////////////////////////////////////
+> 
+. gen exp_total = hxygrci + hxyalci + hxycigi + hxypbti + hxymli + hxymvfi + hxymcfi + hxywcfi + hxyccfi + hxytlii + hxyphii + hxyoi
+> i + hxyhlpi + hxyphmi + hxyutil + hxyhmrn + hxymvr + hxyeduc //sum is missing if any of them are missing, therefore used only from
+>  wave 6 onwards 
+(149,556 missing values generated)
+
 . 
-. gen pension_age=1 if bnage==1 | bnage==2 | bnage1==1
+. gen exp_t5 = hxygrci + hxyalci + hxycigi + hxypbti + hxymli + hxymvfi  + hxyphii + hxyhmrn + hxymvr + hxyeduc //those available fr
+> om wave onwards 
+(132,874 missing values generated)
+
+. 
+. gen exp_medical = hxyphii + hxyoii + hxyhlpi + hxyphmi  
+(90,575 missing values generated)
+
+. 
+. gen exp_maintain = hxyhmrn + hxymvr //home and vehical maintenance
+(130,431 missing values generated)
+
+. 
+. gen exp_everyday =  hxygrci + hxyalci + hxycigi + hxypbti + hxymli + hxymvfi + hxymcfi + hxywcfi + hxyccfi + hxytlii + hxyutil //n
+> on medical, non maintenance and educational 
+(143,413 missing values generated)
+
+. 
+. //adjust for inflation 
+. 
+. forval i = 1/`n' {
+  2.         local y: word `i' of `years'
+  3.         local ind: word `i' of `cpi' 
+  4.         replace exp_total= exp_total/`ind'*100 if year == `y' //adjust for inflation
+  5.         replace exp_t5= exp_t5/`ind'*100 if year == `y'
+  6.         replace exp_medical = exp_medical/`ind'*100 if year == `y'
+  7.     replace exp_maintain = exp_maintain/`ind'*100 if year == `y'
+  8.         replace exp_everyday = exp_everyday/`ind'*100 if year == `y'
+  9. }  
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(14,501 real changes made)
+(0 real changes made)
+(13,651 real changes made)
+(0 real changes made)
+(14,438 real changes made)
+(14,586 real changes made)
+(16,970 real changes made)
+(13,449 real changes made)
+(14,915 real changes made)
+(14,140 real changes made)
+(14,240 real changes made)
+(16,804 real changes made)
+(13,128 real changes made)
+(14,510 real changes made)
+(13,794 real changes made)
+(13,901 real changes made)
+(16,716 real changes made)
+(12,823 real changes made)
+(14,114 real changes made)
+(14,051 real changes made)
+(14,177 real changes made)
+(17,131 real changes made)
+(13,022 real changes made)
+(14,364 real changes made)
+(14,702 real changes made)
+(14,839 real changes made)
+(17,309 real changes made)
+(13,580 real changes made)
+(15,012 real changes made)
+(18,859 real changes made)
+(19,065 real changes made)
+(22,803 real changes made)
+(17,611 real changes made)
+(19,366 real changes made)
+(18,776 real changes made)
+(18,906 real changes made)
+(22,588 real changes made)
+(17,436 real changes made)
+(19,206 real changes made)
+(18,706 real changes made)
+(18,863 real changes made)
+(22,521 real changes made)
+(17,154 real changes made)
+(19,206 real changes made)
+(18,832 real changes made)
+(19,000 real changes made)
+(22,457 real changes made)
+(17,541 real changes made)
+(19,290 real changes made)
+(18,863 real changes made)
+(18,988 real changes made)
+(22,545 real changes made)
+(17,447 real changes made)
+(19,280 real changes made)
+(19,491 real changes made)
+(19,662 real changes made)
+(22,692 real changes made)
+(18,007 real changes made)
+(19,979 real changes made)
+(19,515 real changes made)
+(19,675 real changes made)
+(22,556 real changes made)
+(17,908 real changes made)
+(20,024 real changes made)
+(19,742 real changes made)
+(19,882 real changes made)
+(22,328 real changes made)
+(18,044 real changes made)
+(19,995 real changes made)
+(19,854 real changes made)
+(19,969 real changes made)
+(22,377 real changes made)
+(18,157 real changes made)
+(20,226 real changes made)
+(20,080 real changes made)
+(20,161 real changes made)
+(21,927 real changes made)
+(17,886 real changes made)
+(20,280 real changes made)
+(19,559 real changes made)
+(19,617 real changes made)
+(21,463 real changes made)
+(17,109 real changes made)
+(19,767 real changes made)
+
+. 
+. //adjust for household size 
+. 
+. 
+. 
+. /////////////////////////////////////////////
+> ///////////////AGE PENSION VARIABLES/////////
+> //////////////////////////////////////////////
+> 
+. //whether or not age eligible 
+. gen pension_age=1 if bnage==1 | bnage==2 | bnage1==1 //age above threshold.
 (374,339 missing values generated)
 
-. replace pension_age==0 if missing(pension_age)
-== invalid name
-r(198);
-
-end of do-file
-
-r(198);
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. replace pension_age=0 if missing(pension_age)
-(374,339 real changes made)
-
-. 
-end of do-file
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. bysort id: gen pension_changed =1 if pension_age - pension_age[_n-1] ==1 
-(429,565 missing values generated)
-
-. 
-end of do-file
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. replace pension_changed =0 if missing(pension_changed)
-(429,565 real changes made)
-
-. 
-end of do-file
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. bysort id: egen pwave = max(cond(pension_changed==1, wave, .)) //the wave at which 
-(372,192 missing values generated)
-
-. 
-end of do-file
-
-. br id wave hgage bnage bnage1 pension_age pwave 
-
-. br id wave hgage bnage bnage1 pension_age pwave  bncap
-
-. drop pension_age 
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. gen pension_age=1 if bnage==1 | bnage==2 | bnage1==1
-(374,339 missing values generated)
-
-. bysort id: replace pension_age==1 if pension_age[_n-1] ==1
-== invalid name
-r(198);
-
-end of do-file
-
-r(198);
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. bysort id: replace pension_age=1 if pension_age[_n-1] ==1
+. bysort id: replace pension_age=1 if pension_age[_n-1] ==1 //fill in waves where someone is non-responding bnage is recorded as zer
+> o
 (1,175 real changes made)
 
-. 
-end of do-file
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. replace pension_age=0 if missing(pension_age)
+. replace pension_age=0 if missing(pension_age) //might want to check this for missing. 
 (373,164 real changes made)
 
-. 
-end of do-file
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
 . bysort id: gen pension_changed =1 if pension_age - pension_age[_n-1] ==1 
-variable pension_changed already defined
-r(110);
-
-end of do-file
-
-r(110);
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
+(429,764 missing values generated)
 
 . replace pension_changed =0 if missing(pension_changed)
-(0 real changes made)
-
-. 
-end of do-file
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. bysort id: egen pwave = max(cond(pension_changed==1, wave, .)) //the wave at which 
-variable pwave already defined
-r(110);
-
-end of do-file
-
-r(110);
-
-. drop pwave 
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
+(429,764 real changes made)
 
 . bysort id: egen pwave = max(cond(pension_changed==1, wave, .)) //the wave at which reached pension age 
-(372,192 missing values generated)
+(374,512 missing values generated)
 
 . 
-end of do-file
-
-. br id wave hgage bnage bnage1 pension_age pwave bncap
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. bysort id: egen pwave1 = pwave +1  //the wave after to improve accuracy 
-unknown egen function pwave()
-r(133);
-
-end of do-file
-
-r(133);
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. bysort id: gen pwave1 = pwave +1  //the wave after to improve accuracy 
-(372,192 missing values generated)
+. 
+. //whether or not receives age pension 
+. //p_receives1 and p_receives5 are whether ever receives age pension in the 1st period and 5 periods after they become age eligible
+> . 
+. 
+. gen flag1=1 if wave <= pwave+1 & wave>=pwave //period or period after turning to age_pension age, inrange does something funny wit
+> h missing values 
+(426,762 missing values generated)
 
 . 
-end of do-file
+. gen p1=1 if bncap==1 & flag1==1 
+(430,782 missing values generated)
 
-. br id wave hgage bnage bnage1 pension_age pwave  pwave1
+. replace p1=0 if bncap==2 & flag1==1 //does not receive age pension the first or the second period after age eligible
+(3,961 real changes made)
 
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. gen p1 ==1 if wave ==pwave & bncap==1 
-== invalid name
-r(198);
-
-end of do-file
-
-r(198);
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. gen p1 =1 if wave ==pwave & bncap==1 
-(432,079 missing values generated)
+. bysort id: egen p_receives1 = max(p1)
+(374,516 missing values generated)
 
 . 
-end of do-file
-
-. br id wave pwave bncap 
-
-. br id wave pwave bncap p1
-
-. br bncap
-
-. br id wave pwave bncap p1
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. replace p1 =1 if  bncap==1 & wave == pwave1
-(1,475 real changes made)
-
-. 
-end of do-file
-
-. help inrange
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. gen flag =1 if inrange(wave,pwave,pwave+5)
-(44,664 missing values generated)
-
-. 
-end of do-file
-
-. br id wave pwave flag
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. gen flag2=1 if wave <= pwave+5 & pwave>=pwave 
-(10,401 missing values generated)
-
-. 
-end of do-file
-
-. br id wave pwave flag flag2
-
-. drop flag2
-
-. gen flag2=1 if wave <= pwave+5 & pwave>=pwave 
-(10,401 missing values generated)
-
-. drop flag2
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. gen flag2=1 if wave <= pwave+5 & wave>=pwave 
-(416,856 missing values generated)
-
-. 
-end of do-file
-
-. br id wave pwave flag flag2
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
 . gen flag5=1 if wave <= pwave+5 & wave>=pwave 
-(416,856 missing values generated)
+(417,541 missing values generated)
 
+. gen p5=1 if bncap==1 & flag5==1
+(425,499 missing values generated)
+
+. replace p5=0 if bncap==2 & flag5==1
+(7,767 real changes made)
+
+. bysort id: egen p_receives5 = max(p5) //someone who receives age pension in some periods and not in other periods is considered to
+>  receive age pension. 
+(374,516 missing values generated)
+
+. 
+. 
+. //other regression controls  
+. 
+. gen hhs_income = hifditp/1000 //income in thousands 
+
+. replace hhs_income = hifditn/1000 if hifditn>0 //income in thousands 
+(736 real changes made)
+
+. gen partner=1 if mrcurr <= 2
+(232,795 missing values generated)
+
+. replace partner=0 if mrcurr >= 3
+(232,795 real changes made)
+
+. gen hhpersons = hhpers 
+
+. bysort id: ipolate hwfini wave, generate(hhfini) epolate //interpolate financial wealth for middle waves 
+(43798 missing values generated)
+
+. replace hhfini=hhfini/1000
+(388,538 real changes made)
+
+. // Save new data set
+. 
+. egen age_bracket = cut(hgage), at(0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120)
+
+. 
+. replace age_bracket= 80 if age_bracket>80 //80+ group
+(5,760 real changes made)
+
+. 
+. 
+. //job related variables 
+. 
+. rename jbmmply jcompany_sector
+
+. rename jbmemsz jcompany_size 
+
+. rename jbmi61  jindustry_1digit
+
+. rename jbmi62  jindustry_2digit
+
+. rename jbmo61  joccup_1digit
+
+. rename jbmo62  joccup_2digit 
+
+. 
+. 
+. 
+. compress
+  variable lfp was float now byte
+  variable retirement_stat was float now byte
+  variable retired_change was float now byte
+  variable retire was float now byte
+  variable p_age was float now byte
+  variable changed_cpq was float now byte
+  variable changed_scq was float now byte
+  variable j_changed was float now byte
+  variable reached_page was float now byte
+  variable sixty_plus was float now byte
+  variable cond_release1 was float now byte
+  variable cond_release2 was float now byte
+  variable cond_release3 was float now byte
+  variable cond_changed1 was float now byte
+  variable cond_changed2 was float now byte
+  variable cond_changed3 was float now byte
+  variable cond_release was float now byte
+  variable cond_changed was float now byte
+  variable year was float now int
+  variable event was float now byte
+  variable p_wave was float now byte
+  variable time_p was float now byte
+  variable event_a was float now byte
+  variable a_wave was float now byte
+  variable time_a was float now byte
+  variable event_r was float now byte
+  variable r_wave was float now byte
+  variable time_r was float now byte
+  variable move_address was float now byte
+  variable own was float now byte
+  variable upgrade_financial was float now byte
+  variable downgrade_financial was float now byte
+  variable upgrade_physical was float now byte
+  variable downgrade_physical was float now byte
+  variable rent_to_own was float now byte
+  variable own_to_rent was float now byte
+  variable pension_age was float now byte
+  variable pension_changed was float now byte
+  variable pwave was float now byte
+  variable flag1 was float now byte
+  variable p1 was float now byte
+  variable p_receives1 was float now byte
+  variable flag5 was float now byte
+  variable p5 was float now byte
+  variable p_receives5 was float now byte
+  variable partner was float now byte
+  variable hhpersons was float now byte
+  variable age_bracket was float now byte
+  (61,935,445 bytes saved)
+
+. 
+. save "$data_output/all_variables", replace 
+file /Users/bubbles/Desktop/Hilda/output/all_variables.dta saved
+
+. 
 . 
 end of do-file
 
+. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD30916.000000"
+
+. //this file look mortgage rates
+. //replicate table for table 18. 
+. 
+. clear 
+
+. 
+. version 17.0
+
+. 
+. cap log close 

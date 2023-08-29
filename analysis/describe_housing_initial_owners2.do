@@ -40,7 +40,7 @@ by id (wave), sort: keep if hgage[1] >= 50 & !missing(hgage[1])
 
 by id (wave), sort: keep if hstenr[1] == 1 //keep initial owners
 
-
+/*
 
 //1.simple version where just looks at the first outcome when the first ownership spell ends (end if move address), and see what that outcome is 
 
@@ -107,7 +107,9 @@ tab failure if wave==1 & failure != 1 & failure != 3 //divide ownership change b
 //financial upgrade is more likely than physical upgrade
 
 
-/*
+*/
+
+
 //2.Rental tenure after the first ownership spell ends /graph 
 //Need to start again rather than just use the above because mhli is no longer a key variable and we might not want to delete all observations after mhli is missing
 //Also the definition of change is different now. 
@@ -142,7 +144,7 @@ sts graph //graph
 
 sts graph, by(age_group) //my shape looks similar to the whelan et al ones in terms of the younger two groups being very similar and the oldest group very different, but the estimates are bigger. 
 
-*/
+
 
 
 

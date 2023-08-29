@@ -1,9 +1,10 @@
-------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  /Users/bubbles/Desktop/Retirement_Income/dofile/housing_describe.log
   log type:  text
- opened on:  28 Jun 2023, 14:54:59
+ opened on:  19 Jul 2023, 17:53:09
 
+. 
 . 
 . global folder_path "/Users/bubbles/Desktop/Hilda" 
 
@@ -11,31 +12,12 @@
 . global data_output "$folder_path/output"
 
 . 
-. use "$data_output/all_variables", clear 
+. use "$data_output/combined", clear 
 
 . 
 . compress
-  variable lfp was float now byte
-  variable retirement_status was float now byte
-  variable retired_change was float now byte
-  variable retired was float now byte
-  variable p_age was float now byte
-  variable changed_cpq was float now byte
-  variable changed_scq was float now byte
-  variable j_changed was float now byte
-  variable reached_page was float now byte
-  variable sixty_plus was float now byte
-  variable cond_release was float now byte
-  variable cond_changed was float now byte
-  variable move_address was float now byte
-  variable own was float now byte
-  variable upgrade_financial was float now byte
-  variable downgrade_financial was float now byte
-  variable upgrade_physical was float now byte
-  variable downgrade_physical was float now byte
-  variable rent_to_own was float now byte
-  variable own_to_rent was float now byte
-  (25,986,900 bytes saved)
+  variable wave was float now byte
+  (1,299,345 bytes saved)
 
 . 
 . xtset id wave //set as panel 
@@ -45,410 +27,94 @@ Panel variable: id (unbalanced)
          Delta: 1 unit
 
 . 
-. gen sup=1 if rtsup ==1 & rtlump>0 //
-(431,285 missing values generated)
+. by id (wave), sort: keep if hgage[1] >= 55 & !missing(hgage[1]) 
+(370,428 observations deleted)
 
 . 
-. bysort id: egen sup_observed=min(sup) 
-(405,463 missing values generated)
-
-. 
-. keep if sup_observed ==1 //keep those who reported their super at retirement (so in 2015 or 2019)
-(405,463 observations deleted)
+. by id (wave), sort: keep if hstenr[1] == 1 //keep initial owners
+(23,048 observations deleted)
 
 . 
 . 
 . 
-. /* some people report multiple retirement years)
+. //simple version where just looks at the first outcome when the first ownership spell ends (end if move address), and see what that outcome
+>  is 
+. 
+. //the main point is to generate a dataset that has id, failure (the final outcome when change happened) and failtime (when this change happ
+> ened) 
+. //something who dropped after 3 waves and someone who dropped out after 20 waves both count as attrition but at different times. 
+. 
+. sort id wave 
+
+. 
+. by id: gen flag=1 if missing(hstenr) | (missing(mhli) & _n!=1)  //drop waves after a key variable becomes missing
+(38,110 missing values generated)
+
+. by id : replace flag=flag[_n-1] if flag[_n-1]==1
+(1,026 real changes made)
+
+. drop if flag==1 
+(2,555 observations deleted)
+
+. drop flag 
+
+. 
+. by id: gen change=1 if (hstenr[_n] != hstenr[_n-1]) & _n!=1 & !missing(hstenr) & !missing(hstenr[_n-1]) //change ownership status (in princ
+> ipal can live in the same place)
+(35,919 missing values generated)
+
+. replace change =1 if mhli==1 //change address 
+(998 real changes made)
+
+. by id: egen failtime= min(cond(change == 1, wave, .)) //record the first time change turned 1 
+(21,011 missing values generated)
+
+. by id: egen failure = min(cond(wave == failtime, hstenr, .))
+(21,011 missing values generated)
+
+. 
+. /*
+> by id: gen flag =1 if change ==1 //drop the periods after the first time 
+> by id: replace flag = flag[_n-1] if flag[_n-1] ==1 
+> drop if flag ==1 
 > 
-> bysort id: egen age_r1 =  min(rtcage) //age for complete retirement, if multiple numbers are provided use the minimum one 
-> 
-> bysort id: egen age_r2 =  max(rtcage) 
-> 
-> *assert age_r1 == age_r2 // 340/1586 reported different age for complete retirement between two waves
-> 
-> keep if age_r1 
-> 
-> */
-. 
-. drop if wave <=11 //this doesn't affect the number of observations 
-(12,713 observations deleted)
+> */ 
+. by id: replace failure = 0 if missing(failure) // attrition 
+(21,011 real changes made)
+
+. by id: replace failtime = _N if missing(failtime) //record period attrition happened. 
+(21,011 real changes made)
 
 . 
-. bysort id: egen age_r1 =  min(rtcage) //age for complete retirement, if multiple numbers are provided use the minimum one 
-(3,406 missing values generated)
+. //describe 
+. label define outcomes 0 "0 attrition" 1 "1 ownership" 2 "2 rent" 3 "3 rent-buy scheme" 4 "4 rent free"
 
-. 
-. bysort id: egen age_r2 =  max(rtcage)  //still 291 people report different retirement age across the two waves 
-(3,406 missing values generated)
+. label values failure outcomes
 
-. 
-. drop if age_r1 != age_r2 //drop those who reported different retirement age (i.e.  keep only those who had 1 retirement obse
-> rvation)
-(2,853 observations deleted)
+. tab failure if wave==1 //this shows what happens to those initial owners (after the end of the first ownership spell)
 
-. 
-. drop if missing(age_r1) //drop if never observed to be fully retired, now only 931 left 
-(3,406 observations deleted)
-
-. 
-. bysort id: egen super_r = max(cond(!missing(rtcage), rtlump, .))  //this is the self reported super at retirement
-(992 missing values generated)
-
-. 
-. drop if missing(super_r) //only 824 people left 
-(992 observations deleted)
-
-. 
-. drop if age_r1 < p_age //drop those people who retired before preservation age 745 people 
-(676 observations deleted)
-
-. 
-. bysort id: egen wave_r = max(cond(age_r1==hgage, wave, .)) //record the wave of retirement 
-(435 missing values generated)
-
-. 
-. drop if wave_r >= 19 //drop the ones for which there are no wealth modules after their retirement, probably don't need to do
->  this if can use the new super questions better later, only 566 people left 
-(1,661 observations deleted)
-
-. 
-. gen wave_wealth = 14 if wave_r <=14
-(3,705 missing values generated)
-
-. replace wave_wealth = 18 if wave_r > 14
-(3,705 real changes made)
-
-. 
-. replace sacfnda=0 if sacfnd==2 
-(170 real changes made)
-
-. bysort id: egen sup_after = max(cond(wave==wave_wealth,sacfnda, .))
-(1,060 missing values generated)
-
-. 
-. drop if missing(sup_after) //450 people left
-(1,060 observations deleted)
+          failure |      Freq.     Percent        Cum.
+------------------+-----------------------------------
+      0 attrition |      2,215       68.22       68.22
+      1 ownership |        659       20.30       88.51
+           2 rent |        233        7.18       95.69
+3 rent-buy scheme |          7        0.22       95.90
+      4 rent free |        133        4.10      100.00
+------------------+-----------------------------------
+            Total |      3,247      100.00
 
 . 
 . 
+. //use change in residency, and divide into upgrade downgrade and similar 
 . 
-. 
-. 
-. 
-end of do-file
-
-. unique id
-Number of unique values of id is  450
-Number of records is  4291
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. gen sup_c =sup_after-super_r 
+. sort id wave 
 
 . 
-end of do-file
-
-. sum sup_c
-
-    Variable |        Obs        Mean    Std. dev.       Min        Max
--------------+---------------------------------------------------------
-       sup_c |      4,291   -19310.17    342334.6   -1650000    2091835
-
-. br id wave super_r sup_after sup_c 
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. 
-. bysort id: keep if _n==1
-(3,841 observations deleted)
-
-. 
-end of do-file
-
-. sum sup_c, detail
-
-                            sup_c
--------------------------------------------------------------
-      Percentiles      Smallest
- 1%      -900000       -1650000
- 5%      -510000       -1450000
-10%      -295000       -1435000       Obs                 450
-25%       -99000       -1205000       Sum of wgt.         450
-
-50%       -18000                      Mean          -21705.15
-                        Largest       Std. dev.        345014
-75%        11000        1591835
-90%       200000        1891835       Variance       1.19e+11
-95%       480000        1991835       Skewness       1.310433
-99%      1391835        2091835       Kurtosis       14.79739
-
-. count if sup_after = 0
-=exp not allowed
-r(101);
-
-. count if sup_after == 0
-  119
-
-. unique id
-Number of unique values of id is  450
-Number of records is  450
-
-. br super_r sup_after sup_c
-
-. id wave_r wealth_wealth super_r sup_after sup_c
-command id is unrecognized
-r(199);
-
-. br id wave_r wealth_wealth super_r sup_after sup_c
-variable wealth_wealth not found
-r(111);
-
-. br id wave_r wave_wealth super_r sup_after sup_c
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. drop if wave_c > sup_r
-wave_c not found
-r(111);
+. by id: gen change=1 if mhli==1 | (mhli==. & _n!=1) //changed address or missing (both serve as a reason for a wave to be last wave)
+variable change already defined
+r(110);
 
 end of do-file
 
-r(111);
+r(110);
 
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. drop if sup_c > sup_r
-sup_r not found
-r(111);
-
-end of do-file
-
-r(111);
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. drop if sup_c > super_r
-(34 observations deleted)
-
-. 
-end of do-file
-
-. sum sup_c, detail
-
-                            sup_c
--------------------------------------------------------------
-      Percentiles      Smallest
- 1%      -900000       -1650000
- 5%      -530000       -1450000
-10%      -302000       -1435000       Obs                 416
-25%      -100000       -1205000       Sum of wgt.         416
-
-50%       -23000                      Mean          -70201.82
-                        Largest       Std. dev.      260777.8
-75%            0         791835
-90%        80000         858623       Variance       6.80e+10
-95%       200000         891835       Skewness      -1.354521
-99%       758623        1091835       Kurtosis       12.62612
-
-. br id wave_r wave_wealth super_r sup_after sup_c
-
-. by hdsex: sum sup_c, detail
-variable hdsex not found
-r(111);
-
-. by hgsex: sum sup_c, detail
-not sorted
-r(5);
-
-. bysort hgsex: sum sup_c, detail
-
-------------------------------------------------------------------------------------------------------------------------------
--> hgsex = [1] Male
-
-                            sup_c
--------------------------------------------------------------
-      Percentiles      Smallest
- 1%     -1435000       -1650000
- 5%      -700000       -1450000
-10%      -450000       -1435000       Obs                 226
-25%      -120000       -1205000       Sum of wgt.         226
-
-50%       -28875                      Mean          -95127.45
-                        Largest       Std. dev.        302926
-75%            0         591835
-90%       100000         600000       Variance       9.18e+10
-95%       250000         758623       Skewness      -1.616111
-99%       600000         891835       Kurtosis        9.86481
-
-------------------------------------------------------------------------------------------------------------------------------
--> hgsex = [2] Female
-
-                            sup_c
--------------------------------------------------------------
-      Percentiles      Smallest
- 1%      -800000        -900000
- 5%      -265000        -800000
-10%      -187500        -700000       Obs                 190
-25%       -70000        -640000       Sum of wgt.         190
-
-50%       -21000                      Mean          -40553.45
-                        Largest       Std. dev.      196095.8
-75%            0         500000
-90%        35000         791835       Variance       3.85e+10
-95%       100000         858623       Skewness        .720926
-99%       858623        1091835       Kurtosis       15.55431
-
-
-. xtile 
-varlist required
-r(100);
-
-. help stile
-
-. help xtile
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. xtile quart = super_r, nq(4)
-
-. 
-end of do-file
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. bysort quart: sum sup_c, detail //
-
-------------------------------------------------------------------------------------------------------------------------------
--> quart = 1
-
-                            sup_c
--------------------------------------------------------------
-      Percentiles      Smallest
- 1%       -70000         -70000
- 5%       -67000         -70000
-10%       -60000         -70000       Obs                 111
-25%       -35000         -70000       Sum of wgt.         111
-
-50%       -15000                      Mean          -20961.13
-                        Largest       Std. dev.      24267.23
-75%        -3000          19000
-90%            0          20000       Variance       5.89e+08
-95%        11000          30000       Skewness      -.4301948
-99%        30000          40000       Kurtosis       2.653611
-
-------------------------------------------------------------------------------------------------------------------------------
--> quart = 2
-
-                            sup_c
--------------------------------------------------------------
-      Percentiles      Smallest
- 1%      -215000        -215000
- 5%      -200000        -200000
-10%      -150000        -200000       Obs                  97
-25%      -100000        -200000       Sum of wgt.          97
-
-50%       -30000                      Mean          -52320.69
-                        Largest       Std. dev.      70864.52
-75%            0          40000
-90%        20000          80000       Variance       5.02e+09
-95%        40000         100000       Skewness      -.4075852
-99%       110000         110000       Kurtosis       2.673272
-
-------------------------------------------------------------------------------------------------------------------------------
--> quart = 3
-
-                            sup_c
--------------------------------------------------------------
-      Percentiles      Smallest
- 1%      -500000        -500000
- 5%      -450000        -500000
-10%      -300000        -500000       Obs                 108
-25%      -100000        -500000       Sum of wgt.         108
-
-50%       -28500                      Mean          -41854.46
-                        Largest       Std. dev.      194749.4
-75%        45000         450000
-90%       200000         450000       Variance       3.79e+10
-95%       250000         480000       Skewness      -.0219039
-99%       480000         500000       Kurtosis       4.224903
-
-------------------------------------------------------------------------------------------------------------------------------
--> quart = 4
-
-                            sup_c
--------------------------------------------------------------
-      Percentiles      Smallest
- 1%     -1550000       -1650000
- 5%      -860000       -1450000
-10%      -785000       -1435000       Obs                 100
-25%      -445000       -1205000       Sum of wgt.         100
-
-50%       -79000                      Mean          -172818.9
-                        Largest       Std. dev.      473297.4
-75%        37000         791835
-90%     279311.5         858623       Variance       2.24e+11
-95%     679311.5         891835       Skewness      -.3242762
-99%       991835        1091835       Kurtosis        4.20928
-
-
-. 
-end of do-file
-
-. sum sup_c, detail
-
-                            sup_c
--------------------------------------------------------------
-      Percentiles      Smallest
- 1%      -900000       -1650000
- 5%      -530000       -1450000
-10%      -302000       -1435000       Obs                 416
-25%      -100000       -1205000       Sum of wgt.         416
-
-50%       -23000                      Mean          -70201.82
-                        Largest       Std. dev.      260777.8
-75%            0         791835
-90%        80000         858623       Variance       6.80e+10
-95%       200000         891835       Skewness      -1.354521
-99%       758623        1091835       Kurtosis       12.62612
-
-. sum sup_after, detail
-
-                          sup_after
--------------------------------------------------------------
-      Percentiles      Smallest
- 1%            0              0
- 5%            0              0
-10%            0              0       Obs                 416
-25%            0              0       Sum of wgt.         416
-
-50%       140000                      Mean           304246.1
-                        Largest       Std. dev.      459179.3
-75%       420000        2591835
-90%       800000        2591835       Variance       2.11e+11
-95%      1200000        2591835       Skewness       2.769343
-99%      2591835        2591835       Kurtosis       12.34118
-
-. count if sup_after ==0
-  119
-
-. help mvsumm
-
-. do "/var/folders/qm/3srmvfy90vv8qv2rzzs5zkq40000gn/T//SD01577.000000"
-
-. //This filed computes super and retirement variables 
-. 
-. 
-. *Author: Angela Jiang 
-. *Written on a mac 
-. 
-. *This dofile computes trend descriptives for housing around when people gain access to superannuation funds 
-. 
-. 
-. clear 
-
-. 
-. version 17.0
-
-. 
-. cap log close 

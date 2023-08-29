@@ -40,7 +40,7 @@ by id (wave), sort: keep if hgage[1] >= 50 & !missing(hgage[1])
 
 by id (wave), sort: keep if hstenr[1] == 2 | hstenr[1] == 4 //keep initial renters 
 
-replace hstenr =2 if hstenr==4 //for now treat the two rental groups as the same. 
+replace hstenr =1 if hstenr==3 //rent-buy scheme treated as buy 
 
 //first rental tenure results 
 
@@ -59,7 +59,7 @@ by id: replace failure = 0 if missing(failure) // attrition
 by id: replace failtime = _N if missing(failtime) //record period attrition happened. 
 
 
-label define outcomes 0 "0 attrition" 1 "1 ownership" 3 "3 rent-buy scheme" 
+label define outcomes 0 "renting" 1 "ownership" 4 "rent free/life tenure " 
 label values failure outcomes
 
 tab failure if wave==1 
